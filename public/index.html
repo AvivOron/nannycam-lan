@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NannyCam</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d0d0f;
+    --surface: #18181b;
+    --border: #27272a;
+    --text: #fafafa;
+    --muted: #71717a;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --danger: #ef4444;
+    --danger-muted: #7f1d1d;
+    --success: #22c55e;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Header */
+  header {
+    width: 100%;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  header span { font-size: 11px; color: var(--muted); margin-left: 2px; font-weight: 400; }
+
+  /* Role select */
+  .role-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 24px;
+  }
+  .role-screen p { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .role-cards { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .role-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 36px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, transform 0.1s;
+    min-width: 160px;
+  }
+  .role-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .role-card:active { transform: translateY(0); }
+  .role-card .icon { font-size: 32px; margin-bottom: 12px; }
+  .role-card .label { font-size: 15px; font-weight: 600; }
+  .role-card .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Stream UI */
+  .stream-ui {
+    width: 100%;
+    max-width: 860px;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .video-wrap {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+  }
+  video, #viewer-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+  }
+
+  .video-badge {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.5px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--danger);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Controls bar */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-record { background: var(--danger); color: #fff; }
+  .btn-record.recording { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+  #timer {
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+    min-width: 80px;
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    display: none;
+  }
+  #progress-fill {
+    height: 100%;
+    background: var(--danger);
+    width: 0%;
+    transition: width 0.4s linear;
+  }
+
+  /* Status */
+  .status {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 2px 0;
+  }
+  .status.live { color: var(--success); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📷</div>
+  <h1>NannyCam <span>LAN</span></h1>
+</header>
+
+<div class="role-screen" id="role-select">
+  <p>What are you opening this on?</p>
+  <div class="role-cards">
+    <div class="role-card" onclick="startBroadcaster()">
+      <div class="icon">🖥️</div>
+      <div class="label">Broadcast</div>
+      <div class="hint">Computer with camera</div>
+    </div>
+    <div class="role-card" onclick="startViewer()">
+      <div class="icon">📱</div>
+      <div class="label">Watch</div>
+      <div class="hint">Phone or remote device</div>
+    </div>
+  </div>
+</div>
+
+<!-- Broadcaster -->
+<div class="stream-ui" id="broadcaster-ui" style="display:none;">
+  <div class="video-wrap">
+    <video id="local-video" autoplay muted playsinline></video>
+    <div class="video-badge"><div class="dot"></div> LIVE</div>
+  </div>
+  <div class="status" id="bc-status">Starting...</div>
+</div>
+
+<!-- Viewer -->
+<div class="stream-ui" id="viewer-ui" style="display:none;">
+  <div class="video-wrap">
+    <img id="viewer-img" alt="">
+  </div>
+  <div class="progress-wrap" id="progress-bar"><div id="progress-fill"></div></div>
+  <div class="controls">
+    <button class="btn btn-record" id="record-btn" onclick="toggleRecording()">⏺ Record</button>
+    <span id="timer"></span>
+  </div>
+  <div class="status" id="viewer-status">Connecting...</div>
+</div>
+
+<script>
+const MAX_RECORD_SEC = 30;
+const FRAME_INTERVAL = 100;
+let ws;
+let mediaRecorder;
+let recordedChunks = [];
+let recording = false;
+let recordStart = 0;
+let timerInterval;
+
+function connect(role) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.binaryType = 'arraybuffer';
+  const statusId = role === 'broadcaster' ? 'bc-status' : 'viewer-status';
+  ws.onopen = () => {
+    ws.send(role);
+    document.getElementById(statusId).textContent =
+      role === 'broadcaster' ? 'Streaming — viewers can now connect.' : 'Connected. Waiting for stream...';
+  };
+  ws.onclose = () => {
+    document.getElementById(statusId).textContent = 'Disconnected. Refresh to reconnect.';
+  };
+  return ws;
+}
+
+// --- Broadcaster ---
+// Binary protocol: [1 byte type][payload]
+// 0x01 = JPEG video frame  0x02 = WAV audio chunk
+
+function encodeWAV(samples, sampleRate) {
+  const buf = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buf);
+  const str = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true);
+  str(8, 'WAVE'); str(12, 'fmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); view.setUint16(22, 1, true); // PCM, mono
+  view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+  str(36, 'data'); view.setUint32(40, samples.length * 2, true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    off += 2;
+  }
+  return buf;
+}
+
+async function startBroadcaster() {
+  document.getElementById('role-select').style.display = 'none';
+  document.getElementById('broadcaster-ui').style.display = 'flex';
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: true
+  });
+  const video = document.getElementById('local-video');
+  video.srcObject = stream;
+
+  const socket = connect('broadcaster');
+
+  // Video frames
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  setInterval(() => {
+    if (!ws || ws.readyState !== 1) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    canvas.toBlob(async (blob) => {
+      if (!blob || ws.readyState !== 1) return;
+      const ab = await blob.arrayBuffer();
+      const tagged = new Uint8Array(1 + ab.byteLength);
+      tagged[0] = 0x01;
+      tagged.set(new Uint8Array(ab), 1);
+      ws.send(tagged.buffer);
+    }, 'image/jpeg', 0.7);
+  }, FRAME_INTERVAL);
+
+  // Audio — WAV chunks via ScriptProcessorNode (works on all viewers incl. iOS)
+  const audioCtx = new AudioContext();
+  const source = audioCtx.createMediaStreamSource(stream);
+  const processor = audioCtx.createScriptProcessor(8192, 1, 1);
+  processor.onaudioprocess = (e) => {
+    if (!ws || ws.readyState !== 1) return;
+    const wav = encodeWAV(e.inputBuffer.getChannelData(0), audioCtx.sampleRate);
+    const tagged = new Uint8Array(1 + wav.byteLength);
+    tagged[0] = 0x02;
+    tagged.set(new Uint8Array(wav), 1);
+    ws.send(tagged.buffer);
+  };
+  source.connect(processor);
+  processor.connect(audioCtx.destination);
+}
+
+// --- Viewer ---
+
+let audioContext;
+let audioDestNode;
+let audioScheduledUntil = 0;
+
+function scheduleBuffer(buffer) {
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  if (audioDestNode) source.connect(audioDestNode);
+  const now = audioContext.currentTime;
+  if (audioScheduledUntil < now) audioScheduledUntil = now + 0.05;
+  source.start(audioScheduledUntil);
+  audioScheduledUntil += buffer.duration;
+}
+
+function playAudioChunk(chunk) {
+  if (!audioContext) return;
+  if (audioContext.state === 'suspended') audioContext.resume();
+  audioContext.decodeAudioData(chunk.slice(0), (buffer) => {
+    scheduleBuffer(buffer);
+  }, () => {});
+}
+
+function startViewer() {
+  document.getElementById('role-select').style.display = 'none';
+  document.getElementById('viewer-ui').style.display = 'flex';
+
+  const img = document.getElementById('viewer-img');
+  const socket = connect('viewer');
+
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  audioDestNode = audioContext.createMediaStreamDestination();
+
+  socket.onmessage = (event) => {
+    const data = new Uint8Array(event.data);
+    const type = data[0];
+    const payload = data.slice(1);
+
+    if (type === 0x01) {
+      const blob = new Blob([payload], { type: 'image/jpeg' });
+      const url = URL.createObjectURL(blob);
+      const oldSrc = img.src;
+      img.src = url;
+      if (oldSrc && oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
+      const s = document.getElementById('viewer-status');
+      s.textContent = 'Live';
+      s.className = 'status live';
+    } else if (type === 0x02) {
+      const chunk = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+      playAudioChunk(chunk);
+    }
+  };
+
+  window._getFrame = () => img;
+}
+
+function toggleRecording() {
+  if (!recording) startRecording();
+  else stopRecording();
+}
+
+function startRecording() {
+  const img = window._getFrame();
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = img.naturalWidth || 640;
+  canvas.height = img.naturalHeight || 480;
+
+  const videoTrack = canvas.captureStream(10).getVideoTracks()[0];
+  const tracks = [videoTrack];
+  if (audioDestNode) {
+    const audioTrack = audioDestNode.stream.getAudioTracks()[0];
+    if (audioTrack) tracks.push(audioTrack);
+  }
+
+  const hasAudio = tracks.length > 1;
+  const mimeType = hasAudio && MediaRecorder.isTypeSupported('video/webm; codecs=vp8,opus')
+    ? 'video/webm; codecs=vp8,opus' : 'video/webm; codecs=vp8';
+  mediaRecorder = new MediaRecorder(new MediaStream(tracks), { mimeType });
+  recordedChunks = [];
+
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => saveRecording();
+  mediaRecorder.start(500);
+
+  recording = true;
+  recordStart = Date.now();
+  document.getElementById('record-btn').textContent = '⏹ Stop';
+  document.getElementById('record-btn').classList.add('recording');
+  document.getElementById('progress-bar').style.display = 'block';
+
+  const drawFrame = () => {
+    if (!recording) return;
+    canvas.width = img.naturalWidth || 640;
+    canvas.height = img.naturalHeight || 480;
+    ctx.drawImage(img, 0, 0);
+    requestAnimationFrame(drawFrame);
+  };
+  drawFrame();
+
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - recordStart) / 1000);
+    document.getElementById('timer').textContent = `${elapsed}s / ${MAX_RECORD_SEC}s`;
+    document.getElementById('progress-fill').style.width = `${(elapsed / MAX_RECORD_SEC) * 100}%`;
+    if (elapsed >= MAX_RECORD_SEC) stopRecording();
+  }, 500);
+}
+
+function stopRecording() {
+  if (!recording) return;
+  recording = false;
+  clearInterval(timerInterval);
+  mediaRecorder.stop();
+  document.getElementById('record-btn').textContent = 'Saving...';
+  document.getElementById('record-btn').disabled = true;
+}
+
+async function saveRecording() {
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  document.getElementById('viewer-status').textContent = `Uploading ${(blob.size / 1024 / 1024).toFixed(1)} MB...`;
+
+  try {
+    const res = await fetch('/save-recording', { method: 'POST', body: blob });
+    const data = await res.json();
+    document.getElementById('viewer-status').textContent = `Saved: ${data.filename}`;
+  } catch (e) {
+    document.getElementById('viewer-status').textContent = 'Save failed — downloading locally.';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `nannycam-${Date.now()}.webm`;
+    a.click();
+  }
+
+  document.getElementById('record-btn').textContent = '⏺ Record';
+  document.getElementById('record-btn').classList.remove('recording');
+  document.getElementById('record-btn').disabled = false;
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('timer').textContent = '';
+}
+</script>
+</body>
+</html>
