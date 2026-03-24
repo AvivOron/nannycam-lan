@@ -180,6 +180,22 @@
     padding: 2px 0;
   }
   .status.live { color: var(--success); }
+
+  /* Timelapse */
+  .divider { width: 100%; height: 1px; background: var(--border); margin: 4px 0; }
+  .tl-select {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+  .tl-select:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-timelapse { background: var(--accent); color: #fff; }
+  .btn-timelapse.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -225,6 +241,20 @@
     <span id="timer"></span>
   </div>
   <div class="status" id="viewer-status">Connecting...</div>
+  <div class="divider"></div>
+  <div class="controls">
+    <select id="tl-interval" class="tl-select">
+      <option value="5">1 frame / 5 sec</option>
+      <option value="10">1 frame / 10 sec</option>
+      <option value="30" selected>1 frame / 30 sec</option>
+      <option value="60">1 frame / 1 min</option>
+      <option value="300">1 frame / 5 min</option>
+      <option value="600">1 frame / 10 min</option>
+      <option value="1800">1 frame / 30 min</option>
+    </select>
+    <button class="btn btn-timelapse" id="tl-btn" onclick="toggleTimelapse()">⏱ Timelapse</button>
+  </div>
+  <div class="status" id="tl-status"></div>
 </div>
 
 <script>
@@ -464,6 +494,127 @@ async function saveRecording() {
   document.getElementById('progress-bar').style.display = 'none';
   document.getElementById('progress-fill').style.width = '0%';
   document.getElementById('timer').textContent = '';
+}
+
+// --- Timelapse ---
+// Frames are kept as compressed JPEGs in RAM only — no disk writes during capture.
+// On stop, all frames are encoded into a single video and uploaded once.
+
+const TIMELAPSE_FPS = 30;
+let timelapseFrames = [];
+let timelapseIntervalId = null;
+let timelapsing = false;
+
+function toggleTimelapse() {
+  if (!timelapsing) startTimelapse();
+  else stopTimelapse();
+}
+
+function startTimelapse() {
+  timelapsing = true;
+  timelapseFrames = [];
+  const intervalSec = parseInt(document.getElementById('tl-interval').value);
+
+  document.getElementById('tl-btn').textContent = '⏹ Stop';
+  document.getElementById('tl-btn').classList.add('active');
+  document.getElementById('tl-interval').disabled = true;
+  document.getElementById('tl-status').textContent = 'Waiting for first frame...';
+
+  captureTimelapseFrame();
+  timelapseIntervalId = setInterval(captureTimelapseFrame, intervalSec * 1000);
+}
+
+function captureTimelapseFrame() {
+  const img = window._getFrame();
+  if (!img || !img.naturalWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  canvas.getContext('2d').drawImage(img, 0, 0);
+  canvas.toBlob(blob => {
+    if (!blob || !timelapsing) return;
+    timelapseFrames.push(blob);
+    const n = timelapseFrames.length;
+    const estSec = (n / TIMELAPSE_FPS).toFixed(1);
+    document.getElementById('tl-status').textContent =
+      `${n} frames — ~${estSec}s video at ${TIMELAPSE_FPS}fps`;
+  }, 'image/jpeg', 0.85);
+}
+
+function stopTimelapse() {
+  timelapsing = false;
+  clearInterval(timelapseIntervalId);
+  document.getElementById('tl-btn').textContent = 'Encoding...';
+  document.getElementById('tl-btn').disabled = true;
+  document.getElementById('tl-interval').disabled = true;
+  encodeTimelapse();
+}
+
+async function encodeTimelapse() {
+  if (timelapseFrames.length === 0) {
+    resetTimelapseUI();
+    return;
+  }
+
+  const total = timelapseFrames.length;
+  document.getElementById('tl-status').textContent = `Encoding ${total} frames...`;
+
+  // Size canvas from first frame
+  const firstBitmap = await createImageBitmap(timelapseFrames[0]);
+  const canvas = document.createElement('canvas');
+  canvas.width = firstBitmap.width;
+  canvas.height = firstBitmap.height;
+  firstBitmap.close();
+  const ctx = canvas.getContext('2d');
+
+  const stream = canvas.captureStream(TIMELAPSE_FPS);
+  const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs=vp8')
+    ? 'video/webm; codecs=vp8' : 'video/webm';
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_500_000 });
+  const chunks = [];
+  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+  recorder.start();
+
+  const frameDelay = 1000 / TIMELAPSE_FPS;
+  for (let i = 0; i < timelapseFrames.length; i++) {
+    const bitmap = await createImageBitmap(timelapseFrames[i]);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+    if (i % 15 === 0) {
+      document.getElementById('tl-status').textContent =
+        `Encoding... ${Math.round((i / total) * 100)}%`;
+    }
+    await new Promise(r => setTimeout(r, frameDelay));
+  }
+
+  recorder.stop();
+  await new Promise(r => { recorder.onstop = r; });
+
+  const blob = new Blob(chunks, { type: 'video/webm' });
+  document.getElementById('tl-status').textContent =
+    `Uploading ${(blob.size / 1024 / 1024).toFixed(1)} MB...`;
+
+  try {
+    const res = await fetch('/save-recording', { method: 'POST', body: blob });
+    const data = await res.json();
+    document.getElementById('tl-status').textContent = `Saved: ${data.filename}`;
+  } catch (e) {
+    document.getElementById('tl-status').textContent = 'Save failed — downloading locally.';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `timelapse-${Date.now()}.webm`;
+    a.click();
+  }
+
+  timelapseFrames = [];
+  resetTimelapseUI();
+}
+
+function resetTimelapseUI() {
+  document.getElementById('tl-btn').textContent = '⏱ Timelapse';
+  document.getElementById('tl-btn').classList.remove('active');
+  document.getElementById('tl-btn').disabled = false;
+  document.getElementById('tl-interval').disabled = false;
 }
 </script>
 </body>
