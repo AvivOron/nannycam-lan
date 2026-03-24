@@ -1,3 +1,4 @@
 node_modules/
 certs/
 recordings/
+.DS_Store
