@@ -99,9 +99,9 @@ function encodeTimelapse(id) {
 }
 
 wss.on('connection', (ws) => {
-  ws.on('message', (message) => {
-    // Role registration and JSON commands (text messages)
-    if (!Buffer.isBuffer(message) || message[0] < 128) {
+  ws.on('message', (message, isBinary) => {
+    // Text message — role registration or JSON command
+    if (!isBinary) {
       const str = message.toString('utf8');
 
       if (str === 'broadcaster') {
