@@ -10,14 +10,14 @@
   :root {
     --bg: #0d0d0f;
     --surface: #18181b;
+    --surface2: #1f1f23;
     --border: #27272a;
     --text: #fafafa;
     --muted: #71717a;
     --accent: #6366f1;
-    --accent-hover: #818cf8;
     --danger: #ef4444;
-    --danger-muted: #7f1d1d;
     --success: #22c55e;
+    --warning: #f59e0b;
   }
 
   body {
@@ -30,24 +30,23 @@
     align-items: center;
   }
 
-  /* Header */
   header {
     width: 100%;
-    padding: 20px 24px;
+    padding: 18px 24px;
     display: flex;
     align-items: center;
     gap: 10px;
     border-bottom: 1px solid var(--border);
   }
   .logo {
-    width: 32px; height: 32px;
+    width: 30px; height: 30px;
     background: var(--accent);
-    border-radius: 8px;
+    border-radius: 7px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
+    font-size: 16px;
   }
-  header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-  header span { font-size: 11px; color: var(--muted); margin-left: 2px; font-weight: 400; }
+  header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  header h1 span { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 4px; }
 
   /* Role select */
   .role-screen {
@@ -59,7 +58,7 @@
     gap: 12px;
     padding: 40px 24px;
   }
-  .role-screen p { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .role-screen p { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
   .role-cards { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
   .role-card {
     background: var(--surface);
@@ -69,22 +68,22 @@
     cursor: pointer;
     text-align: center;
     transition: border-color 0.15s, transform 0.1s;
-    min-width: 160px;
+    min-width: 150px;
   }
   .role-card:hover { border-color: var(--accent); transform: translateY(-2px); }
   .role-card:active { transform: translateY(0); }
-  .role-card .icon { font-size: 32px; margin-bottom: 12px; }
+  .role-card .icon { font-size: 30px; margin-bottom: 10px; }
   .role-card .label { font-size: 15px; font-weight: 600; }
   .role-card .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-  /* Stream UI */
+  /* Stream layout */
   .stream-ui {
     width: 100%;
     max-width: 860px;
-    padding: 20px 16px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .video-wrap {
@@ -99,103 +98,110 @@
     width: 100%; height: 100%;
     object-fit: cover;
     display: block;
-    border-radius: 12px;
   }
-
   .video-badge {
     position: absolute;
-    top: 12px; left: 12px;
-    background: rgba(0,0,0,0.6);
+    top: 10px; left: 10px;
+    background: rgba(0,0,0,0.55);
     backdrop-filter: blur(6px);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 6px;
-    padding: 4px 10px;
+    padding: 3px 9px;
     font-size: 11px;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     letter-spacing: 0.5px;
   }
-  .dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--danger);
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0.25 } }
 
-  /* Controls bar */
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
   .btn {
-    padding: 10px 20px;
-    font-size: 14px;
+    padding: 9px 18px;
+    font-size: 13px;
     font-weight: 600;
     border: none;
-    border-radius: 8px;
+    border-radius: 7px;
     cursor: pointer;
     transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
   }
   .btn:active { transform: scale(0.97); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .btn-record { background: var(--danger); color: #fff; }
-  .btn-record.recording { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-record.recording { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+  .btn-danger-ghost { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-warning-ghost { background: transparent; color: var(--warning); border: 1px solid var(--warning); }
 
-  #timer {
-    font-size: 14px;
-    font-variant-numeric: tabular-nums;
-    color: var(--muted);
-    min-width: 80px;
-  }
+  #timer { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); min-width: 80px; }
 
-  /* Progress bar */
-  .progress-wrap {
-    width: 100%;
-    height: 3px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-    display: none;
-  }
-  #progress-fill {
-    height: 100%;
-    background: var(--danger);
-    width: 0%;
-    transition: width 0.4s linear;
-  }
+  .progress-wrap { width: 100%; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; display: none; }
+  #progress-fill { height: 100%; background: var(--danger); width: 0%; transition: width 0.4s linear; }
 
-  /* Status */
-  .status {
-    font-size: 13px;
-    color: var(--muted);
-    padding: 2px 0;
-  }
+  .status { font-size: 13px; color: var(--muted); }
   .status.live { color: var(--success); }
 
-  /* Timelapse */
-  .divider { width: 100%; height: 1px; background: var(--border); margin: 4px 0; }
-  .tl-select {
+  /* Timelapse panel */
+  .tl-panel {
     background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tl-panel-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* New timelapse form */
+  .tl-new-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tl-select {
+    background: var(--surface2);
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-size: 13px;
     cursor: pointer;
     -webkit-appearance: none;
   }
   .tl-select:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-timelapse { background: var(--accent); color: #fff; }
-  .btn-timelapse.active { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .tl-arrow { color: var(--muted); font-size: 13px; }
+  .tl-calc-hint { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* Timelapse list */
+  .tl-list { display: flex; flex-direction: column; gap: 8px; }
+  .tl-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
+  .tl-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tl-item-left { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .tl-item-meta { font-size: 12px; color: var(--muted); }
+  .tl-item-stat { font-size: 13px; font-weight: 500; }
+  .tl-item-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .tl-item-status { font-size: 12px; color: var(--muted); }
+  .tl-item-status.encoding { color: var(--warning); }
+  .tl-item-status.done { color: var(--success); }
 </style>
 </head>
 <body>
@@ -228,6 +234,10 @@
     <div class="video-badge"><div class="dot"></div> LIVE</div>
   </div>
   <div class="status" id="bc-status">Starting...</div>
+  <div class="tl-panel" id="bc-tl-panel">
+    <div class="tl-panel-title">Timelapses</div>
+    <div class="tl-list" id="bc-tl-list"></div>
+  </div>
 </div>
 
 <!-- Viewer -->
@@ -241,31 +251,47 @@
     <span id="timer"></span>
   </div>
   <div class="status" id="viewer-status">Connecting...</div>
-  <div class="divider"></div>
-  <div class="controls">
-    <select id="tl-interval" class="tl-select">
-      <option value="5">1 frame / 5 sec</option>
-      <option value="10">1 frame / 10 sec</option>
-      <option value="30" selected>1 frame / 30 sec</option>
-      <option value="60">1 frame / 1 min</option>
-      <option value="300">1 frame / 5 min</option>
-      <option value="600">1 frame / 10 min</option>
-      <option value="1800">1 frame / 30 min</option>
-    </select>
-    <button class="btn btn-timelapse" id="tl-btn" onclick="toggleTimelapse()">⏱ Timelapse</button>
+
+  <!-- Timelapse panel -->
+  <div class="tl-panel">
+    <div class="tl-panel-title">Timelapse</div>
+    <div class="tl-new-form">
+      <select id="tl-duration" class="tl-select" onchange="updateTlCalc()">
+        <option value="1">1 hour</option>
+        <option value="2">2 hours</option>
+        <option value="4">4 hours</option>
+        <option value="8">8 hours</option>
+        <option value="9" selected>9 hours</option>
+        <option value="12">12 hours</option>
+        <option value="24">24 hours</option>
+      </select>
+      <span class="tl-arrow">→</span>
+      <select id="tl-output" class="tl-select" onchange="updateTlCalc()">
+        <option value="15">15 sec</option>
+        <option value="30" selected>30 sec</option>
+        <option value="60">1 min</option>
+        <option value="120">2 min</option>
+      </select>
+      <span class="tl-calc-hint" id="tl-calc-hint">= 1 frame / 36s</span>
+      <button class="btn btn-accent" id="tl-start-btn" onclick="startTimelapse()">⏱ Start</button>
+    </div>
+    <div class="tl-list" id="viewer-tl-list"></div>
   </div>
-  <div class="status" id="tl-status"></div>
 </div>
 
 <script>
 const MAX_RECORD_SEC = 30;
 const FRAME_INTERVAL = 100;
 let ws;
+let currentRole = null;
 let mediaRecorder;
 let recordedChunks = [];
 let recording = false;
 let recordStart = 0;
 let timerInterval;
+
+// Timelapse state (client mirror of server state)
+const tlMap = new Map(); // id -> { id, intervalSec, frameCount, estSec, startTime, status }
 
 function connect(role) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -280,12 +306,125 @@ function connect(role) {
   ws.onclose = () => {
     document.getElementById(statusId).textContent = 'Disconnected. Refresh to reconnect.';
   };
+  ws.onmessage = (event) => {
+    // Text = JSON control message
+    if (typeof event.data === 'string') {
+      try { handleServerMessage(JSON.parse(event.data)); } catch {}
+      return;
+    }
+    // Binary = video/audio frame (viewer only)
+    if (role === 'viewer') handleBinaryFrame(event.data);
+  };
   return ws;
 }
 
-// --- Broadcaster ---
-// Binary protocol: [1 byte type][payload]
-// 0x01 = JPEG video frame  0x02 = WAV audio chunk
+// ─── Timelapse shared ─────────────────────────────────────────────────────────
+
+function handleServerMessage(msg) {
+  switch (msg.cmd) {
+    case 'tl-list':
+      tlMap.clear();
+      for (const tl of msg.timelapses) tlMap.set(tl.id, { ...tl, status: 'capturing' });
+      renderTlLists();
+      break;
+    case 'tl-new':
+      tlMap.set(msg.tl.id, { ...msg.tl, status: 'capturing' });
+      renderTlLists();
+      break;
+    case 'tl-status': {
+      const tl = tlMap.get(msg.id);
+      if (tl) { tl.frameCount = msg.frames; tl.estSec = msg.estSec; renderTlLists(); }
+      break;
+    }
+    case 'tl-encoding': {
+      const tl = tlMap.get(msg.id);
+      if (tl) { tl.status = 'encoding'; tl.frameCount = msg.frames; renderTlLists(); }
+      break;
+    }
+    case 'tl-done': {
+      const tl = tlMap.get(msg.id);
+      if (tl) { tl.status = 'done'; tl.filename = msg.filename; renderTlLists(); }
+      // Auto-remove done entries after 10s
+      setTimeout(() => { tlMap.delete(msg.id); renderTlLists(); }, 10000);
+      break;
+    }
+    case 'tl-error': {
+      const tl = tlMap.get(msg.id);
+      if (tl) { tl.status = 'error'; tl.errorMsg = msg.msg; renderTlLists(); }
+      setTimeout(() => { tlMap.delete(msg.id); renderTlLists(); }, 10000);
+      break;
+    }
+    case 'tl-cancelled':
+      tlMap.delete(msg.id);
+      renderTlLists();
+      break;
+  }
+}
+
+function renderTlLists() {
+  renderTlList('bc-tl-list');
+  renderTlList('viewer-tl-list');
+}
+
+function renderTlList(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  if (tlMap.size === 0) {
+    el.innerHTML = '<div class="tl-empty">No active timelapses</div>';
+    return;
+  }
+
+  el.innerHTML = '';
+  for (const tl of tlMap.values()) {
+    const age = Math.floor((Date.now() - tl.startTime) / 60000);
+    const ageStr = age < 1 ? 'just now' : `${age}m ago`;
+    const frames = tl.frameCount || 0;
+    const est = tl.estSec || (frames / 30).toFixed(1);
+
+    let statusHtml = '';
+    let actionsHtml = '';
+
+    if (tl.status === 'capturing') {
+      statusHtml = '<span class="tl-item-status">Capturing</span>';
+      actionsHtml = `
+        <button class="btn btn-sm btn-warning-ghost" onclick="saveTimelapse('${tl.id}')">Save</button>
+        <button class="btn btn-sm btn-danger-ghost" onclick="cancelTimelapse('${tl.id}')">Cancel</button>
+      `;
+    } else if (tl.status === 'encoding') {
+      statusHtml = '<span class="tl-item-status encoding">Encoding…</span>';
+    } else if (tl.status === 'done') {
+      statusHtml = `<span class="tl-item-status done">✓ ${tl.filename}</span>`;
+    } else if (tl.status === 'error') {
+      statusHtml = `<span class="tl-item-status" style="color:var(--danger)" title="${tl.errorMsg}">Error</span>`;
+    }
+
+    const div = document.createElement('div');
+    div.className = 'tl-item';
+    div.dataset.id = tl.id;
+    div.innerHTML = `
+      <div class="tl-item-left">
+        <div class="tl-item-meta">1 frame / ${tl.intervalSec}s · started ${ageStr}</div>
+        <div class="tl-item-stat">${frames} frames → ~${est}s video</div>
+      </div>
+      <div class="tl-item-right">
+        ${statusHtml}
+        ${actionsHtml}
+      </div>
+    `;
+    el.appendChild(div);
+  }
+}
+
+function saveTimelapse(id) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd: 'tl-stop', id }));
+}
+
+function cancelTimelapse(id) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd: 'tl-cancel', id }));
+}
+
+// ─── Broadcaster ──────────────────────────────────────────────────────────────
 
 function encodeWAV(samples, sampleRate) {
   const buf = new ArrayBuffer(44 + samples.length * 2);
@@ -293,7 +432,7 @@ function encodeWAV(samples, sampleRate) {
   const str = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
   str(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true);
   str(8, 'WAVE'); str(12, 'fmt '); view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); view.setUint16(22, 1, true); // PCM, mono
+  view.setUint16(20, 1, true); view.setUint16(22, 1, true);
   view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
   view.setUint16(32, 2, true); view.setUint16(34, 16, true);
   str(36, 'data'); view.setUint32(40, samples.length * 2, true);
@@ -307,6 +446,7 @@ function encodeWAV(samples, sampleRate) {
 }
 
 async function startBroadcaster() {
+  currentRole = 'broadcaster';
   document.getElementById('role-select').style.display = 'none';
   document.getElementById('broadcaster-ui').style.display = 'flex';
 
@@ -314,14 +454,13 @@ async function startBroadcaster() {
     video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
     audio: true
   });
-  const video = document.getElementById('local-video');
-  video.srcObject = stream;
+  document.getElementById('local-video').srcObject = stream;
+  connect('broadcaster');
 
-  const socket = connect('broadcaster');
-
-  // Video frames
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
+  const video = document.getElementById('local-video');
+
   setInterval(() => {
     if (!ws || ws.readyState !== 1) return;
     canvas.width = video.videoWidth;
@@ -337,7 +476,6 @@ async function startBroadcaster() {
     }, 'image/jpeg', 0.7);
   }, FRAME_INTERVAL);
 
-  // Audio — WAV chunks via ScriptProcessorNode (works on all viewers incl. iOS)
   const audioCtx = new AudioContext();
   const source = audioCtx.createMediaStreamSource(stream);
   const processor = audioCtx.createScriptProcessor(8192, 1, 1);
@@ -353,7 +491,7 @@ async function startBroadcaster() {
   processor.connect(audioCtx.destination);
 }
 
-// --- Viewer ---
+// ─── Viewer ───────────────────────────────────────────────────────────────────
 
 let audioContext;
 let audioDestNode;
@@ -373,43 +511,62 @@ function scheduleBuffer(buffer) {
 function playAudioChunk(chunk) {
   if (!audioContext) return;
   if (audioContext.state === 'suspended') audioContext.resume();
-  audioContext.decodeAudioData(chunk.slice(0), (buffer) => {
-    scheduleBuffer(buffer);
-  }, () => {});
+  audioContext.decodeAudioData(chunk.slice(0), (buffer) => scheduleBuffer(buffer), () => {});
+}
+
+function handleBinaryFrame(data) {
+  const bytes = new Uint8Array(data);
+  const type = bytes[0];
+  const payload = bytes.slice(1);
+
+  if (type === 0x01) {
+    const blob = new Blob([payload], { type: 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    const img = document.getElementById('viewer-img');
+    const oldSrc = img.src;
+    img.src = url;
+    if (oldSrc && oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
+    const s = document.getElementById('viewer-status');
+    s.textContent = 'Live';
+    s.className = 'status live';
+  } else if (type === 0x02) {
+    const chunk = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+    playAudioChunk(chunk);
+  }
 }
 
 function startViewer() {
+  currentRole = 'viewer';
   document.getElementById('role-select').style.display = 'none';
   document.getElementById('viewer-ui').style.display = 'flex';
-
-  const img = document.getElementById('viewer-img');
-  const socket = connect('viewer');
 
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
   audioDestNode = audioContext.createMediaStreamDestination();
 
-  socket.onmessage = (event) => {
-    const data = new Uint8Array(event.data);
-    const type = data[0];
-    const payload = data.slice(1);
-
-    if (type === 0x01) {
-      const blob = new Blob([payload], { type: 'image/jpeg' });
-      const url = URL.createObjectURL(blob);
-      const oldSrc = img.src;
-      img.src = url;
-      if (oldSrc && oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
-      const s = document.getElementById('viewer-status');
-      s.textContent = 'Live';
-      s.className = 'status live';
-    } else if (type === 0x02) {
-      const chunk = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
-      playAudioChunk(chunk);
-    }
-  };
-
-  window._getFrame = () => img;
+  connect('viewer');
+  updateTlCalc();
 }
+
+// ─── Timelapse (viewer start) ─────────────────────────────────────────────────
+
+function updateTlCalc() {
+  const hours = parseFloat(document.getElementById('tl-duration').value);
+  const outSec = parseFloat(document.getElementById('tl-output').value);
+  const intervalSec = Math.max(1, Math.round((hours * 3600) / (outSec * 30)));
+  const hint = intervalSec < 60
+    ? `= 1 frame / ${intervalSec}s`
+    : `= 1 frame / ${Math.floor(intervalSec / 60)}m${intervalSec % 60 ? (intervalSec % 60) + 's' : ''}`;
+  document.getElementById('tl-calc-hint').textContent = hint;
+}
+
+function startTimelapse() {
+  const hours = parseFloat(document.getElementById('tl-duration').value);
+  const outSec = parseFloat(document.getElementById('tl-output').value);
+  const intervalSec = Math.max(1, Math.round((hours * 3600) / (outSec * 30)));
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ cmd: 'tl-start', intervalSec }));
+}
+
+// ─── Recording ────────────────────────────────────────────────────────────────
 
 function toggleRecording() {
   if (!recording) startRecording();
@@ -417,7 +574,7 @@ function toggleRecording() {
 }
 
 function startRecording() {
-  const img = window._getFrame();
+  const img = document.getElementById('viewer-img');
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   canvas.width = img.naturalWidth || 640;
@@ -435,7 +592,6 @@ function startRecording() {
     ? 'video/webm; codecs=vp8,opus' : 'video/webm; codecs=vp8';
   mediaRecorder = new MediaRecorder(new MediaStream(tracks), { mimeType });
   recordedChunks = [];
-
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => saveRecording();
   mediaRecorder.start(500);
@@ -475,146 +631,23 @@ function stopRecording() {
 async function saveRecording() {
   const blob = new Blob(recordedChunks, { type: 'video/webm' });
   document.getElementById('viewer-status').textContent = `Uploading ${(blob.size / 1024 / 1024).toFixed(1)} MB...`;
-
   try {
     const res = await fetch('/save-recording', { method: 'POST', body: blob });
     const data = await res.json();
     document.getElementById('viewer-status').textContent = `Saved: ${data.filename}`;
-  } catch (e) {
+  } catch {
     document.getElementById('viewer-status').textContent = 'Save failed — downloading locally.';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `nannycam-${Date.now()}.webm`;
     a.click();
   }
-
   document.getElementById('record-btn').textContent = '⏺ Record';
   document.getElementById('record-btn').classList.remove('recording');
   document.getElementById('record-btn').disabled = false;
   document.getElementById('progress-bar').style.display = 'none';
   document.getElementById('progress-fill').style.width = '0%';
   document.getElementById('timer').textContent = '';
-}
-
-// --- Timelapse ---
-// Frames are kept as compressed JPEGs in RAM only — no disk writes during capture.
-// On stop, all frames are encoded into a single video and uploaded once.
-
-const TIMELAPSE_FPS = 30;
-let timelapseFrames = [];
-let timelapseIntervalId = null;
-let timelapsing = false;
-
-function toggleTimelapse() {
-  if (!timelapsing) startTimelapse();
-  else stopTimelapse();
-}
-
-function startTimelapse() {
-  timelapsing = true;
-  timelapseFrames = [];
-  const intervalSec = parseInt(document.getElementById('tl-interval').value);
-
-  document.getElementById('tl-btn').textContent = '⏹ Stop';
-  document.getElementById('tl-btn').classList.add('active');
-  document.getElementById('tl-interval').disabled = true;
-  document.getElementById('tl-status').textContent = 'Waiting for first frame...';
-
-  captureTimelapseFrame();
-  timelapseIntervalId = setInterval(captureTimelapseFrame, intervalSec * 1000);
-}
-
-function captureTimelapseFrame() {
-  const img = window._getFrame();
-  if (!img || !img.naturalWidth) return;
-  const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  canvas.getContext('2d').drawImage(img, 0, 0);
-  canvas.toBlob(blob => {
-    if (!blob || !timelapsing) return;
-    timelapseFrames.push(blob);
-    const n = timelapseFrames.length;
-    const estSec = (n / TIMELAPSE_FPS).toFixed(1);
-    document.getElementById('tl-status').textContent =
-      `${n} frames — ~${estSec}s video at ${TIMELAPSE_FPS}fps`;
-  }, 'image/jpeg', 0.85);
-}
-
-function stopTimelapse() {
-  timelapsing = false;
-  clearInterval(timelapseIntervalId);
-  document.getElementById('tl-btn').textContent = 'Encoding...';
-  document.getElementById('tl-btn').disabled = true;
-  document.getElementById('tl-interval').disabled = true;
-  encodeTimelapse();
-}
-
-async function encodeTimelapse() {
-  if (timelapseFrames.length === 0) {
-    resetTimelapseUI();
-    return;
-  }
-
-  const total = timelapseFrames.length;
-  document.getElementById('tl-status').textContent = `Encoding ${total} frames...`;
-
-  // Size canvas from first frame
-  const firstBitmap = await createImageBitmap(timelapseFrames[0]);
-  const canvas = document.createElement('canvas');
-  canvas.width = firstBitmap.width;
-  canvas.height = firstBitmap.height;
-  firstBitmap.close();
-  const ctx = canvas.getContext('2d');
-
-  const stream = canvas.captureStream(TIMELAPSE_FPS);
-  const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs=vp8')
-    ? 'video/webm; codecs=vp8' : 'video/webm';
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 2_500_000 });
-  const chunks = [];
-  recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-  recorder.start();
-
-  const frameDelay = 1000 / TIMELAPSE_FPS;
-  for (let i = 0; i < timelapseFrames.length; i++) {
-    const bitmap = await createImageBitmap(timelapseFrames[i]);
-    ctx.drawImage(bitmap, 0, 0);
-    bitmap.close();
-    if (i % 15 === 0) {
-      document.getElementById('tl-status').textContent =
-        `Encoding... ${Math.round((i / total) * 100)}%`;
-    }
-    await new Promise(r => setTimeout(r, frameDelay));
-  }
-
-  recorder.stop();
-  await new Promise(r => { recorder.onstop = r; });
-
-  const blob = new Blob(chunks, { type: 'video/webm' });
-  document.getElementById('tl-status').textContent =
-    `Uploading ${(blob.size / 1024 / 1024).toFixed(1)} MB...`;
-
-  try {
-    const res = await fetch('/save-recording', { method: 'POST', body: blob });
-    const data = await res.json();
-    document.getElementById('tl-status').textContent = `Saved: ${data.filename}`;
-  } catch (e) {
-    document.getElementById('tl-status').textContent = 'Save failed — downloading locally.';
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `timelapse-${Date.now()}.webm`;
-    a.click();
-  }
-
-  timelapseFrames = [];
-  resetTimelapseUI();
-}
-
-function resetTimelapseUI() {
-  document.getElementById('tl-btn').textContent = '⏱ Timelapse';
-  document.getElementById('tl-btn').classList.remove('active');
-  document.getElementById('tl-btn').disabled = false;
-  document.getElementById('tl-interval').disabled = false;
 }
 </script>
 </body>
