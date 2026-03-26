@@ -238,6 +238,10 @@
     <div class="tl-panel-title">Timelapses</div>
     <div class="tl-list" id="bc-tl-list"></div>
   </div>
+  <div class="tl-panel" id="bc-rec-panel">
+    <div class="tl-panel-title">WIP Recordings</div>
+    <div class="tl-list" id="bc-rec-list"></div>
+  </div>
 </div>
 
 <!-- Viewer -->
@@ -248,6 +252,14 @@
   <div class="progress-wrap" id="progress-bar"><div id="progress-fill"></div></div>
   <div class="controls">
     <button class="btn btn-record" id="record-btn" onclick="toggleRecording()">⏺ Record</button>
+    <select id="record-duration" class="tl-select" onchange="updateRecordDuration()">
+      <option value="10">10 sec</option>
+      <option value="30" selected>30 sec</option>
+      <option value="60">1 min</option>
+      <option value="120">2 min</option>
+      <option value="300">5 min</option>
+      <option value="600">10 min</option>
+    </select>
     <span id="timer"></span>
   </div>
   <div class="status" id="viewer-status">Connecting...</div>
@@ -280,18 +292,19 @@
 </div>
 
 <script>
-const MAX_RECORD_SEC = 30;
+let MAX_RECORD_SEC = 30;
 const FRAME_INTERVAL = 100;
 let ws;
 let currentRole = null;
-let mediaRecorder;
-let recordedChunks = [];
 let recording = false;
 let recordStart = 0;
 let timerInterval;
 
 // Timelapse state (client mirror of server state)
 const tlMap = new Map(); // id -> { id, intervalSec, frameCount, estSec, startTime, status }
+
+// Recording state (client mirror of server state)
+const recMap = new Map(); // id -> { id, durationSec, frameCount, startTime, status }
 
 function connect(role) {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -358,12 +371,142 @@ function handleServerMessage(msg) {
       tlMap.delete(msg.id);
       renderTlLists();
       break;
+
+    case 'rec-list':
+      recMap.clear();
+      for (const rec of msg.recordings) recMap.set(rec.id, { ...rec, status: 'recording' });
+      renderRecordingStatus();
+      if (currentRole === 'viewer') {
+        // Viewer may be reconnecting to active recordings
+        for (const rec of recMap.values()) {
+          if (rec.status === 'recording') {
+            recording = true;
+            recordStart = rec.startTime;
+            document.getElementById('record-btn').textContent = '⏹ Stop';
+            document.getElementById('record-btn').classList.add('recording');
+            document.getElementById('progress-bar').style.display = 'block';
+            currentRecordingId = rec.id;
+            startRecordingTimer(rec.id, rec.durationSec);
+            break;
+          }
+        }
+      }
+      break;
+    case 'rec-new':
+      recMap.set(msg.rec.id, { ...msg.rec, status: 'recording' });
+      renderRecordingStatus();
+      if (currentRole === 'viewer') {
+        recording = true;
+        recordStart = msg.rec.startTime;
+        document.getElementById('record-btn').textContent = '⏹ Stop';
+        document.getElementById('record-btn').classList.add('recording');
+        document.getElementById('progress-bar').style.display = 'block';
+        startRecordingTimer(msg.rec.id, msg.rec.durationSec);
+      }
+      break;
+    case 'rec-status': {
+      const rec = recMap.get(msg.id);
+      if (rec) { rec.frameCount = msg.frames; renderRecordingStatus(); }
+      break;
+    }
+    case 'rec-encoding': {
+      const rec = recMap.get(msg.id);
+      if (rec) { rec.status = 'encoding'; rec.frameCount = msg.frames; renderRecordingStatus(); }
+      break;
+    }
+    case 'rec-done': {
+      const rec = recMap.get(msg.id);
+      if (rec) { rec.status = 'done'; rec.filename = msg.filename; renderRecordingStatus(); }
+      if (currentRole === 'viewer') {
+        recording = false;
+        clearInterval(timerInterval);
+        document.getElementById('record-btn').textContent = '⏺ Record';
+        document.getElementById('record-btn').classList.remove('recording');
+        document.getElementById('progress-bar').style.display = 'none';
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('timer').textContent = '';
+        document.getElementById('viewer-status').textContent = `Saved: ${msg.filename}`;
+      }
+      setTimeout(() => { recMap.delete(msg.id); renderRecordingStatus(); }, 10000);
+      break;
+    }
+    case 'rec-error': {
+      const rec = recMap.get(msg.id);
+      if (rec) { rec.status = 'error'; rec.errorMsg = msg.msg; renderRecordingStatus(); }
+      if (currentRole === 'viewer') {
+        recording = false;
+        clearInterval(timerInterval);
+        document.getElementById('record-btn').textContent = '⏺ Record';
+        document.getElementById('record-btn').classList.remove('recording');
+        document.getElementById('progress-bar').style.display = 'none';
+        document.getElementById('viewer-status').textContent = `Error: ${msg.msg}`;
+      }
+      setTimeout(() => { recMap.delete(msg.id); renderRecordingStatus(); }, 10000);
+      break;
+    }
+    case 'rec-cancelled':
+      if (currentRole === 'viewer') {
+        recording = false;
+        clearInterval(timerInterval);
+        document.getElementById('record-btn').textContent = '⏺ Record';
+        document.getElementById('record-btn').classList.remove('recording');
+        document.getElementById('progress-bar').style.display = 'none';
+      }
+      recMap.delete(msg.id);
+      renderRecordingStatus();
+      break;
   }
 }
 
 function renderTlLists() {
   renderTlList('bc-tl-list');
   renderTlList('viewer-tl-list');
+}
+
+function renderRecordingStatus() {
+  // Show WIP recordings in broadcaster panel
+  const bcRecList = document.getElementById('bc-rec-list');
+  if (!bcRecList) return;
+
+  if (recMap.size === 0) {
+    bcRecList.innerHTML = '<div class="tl-empty">No active recordings</div>';
+    return;
+  }
+
+  bcRecList.innerHTML = '';
+  for (const rec of recMap.values()) {
+    const age = Math.floor((Date.now() - rec.startTime) / 1000);
+    const frames = rec.frameCount || 0;
+    const sizeEst = (frames * 300 / 1024 / 1024).toFixed(1); // ~300KB per frame estimate
+
+    let statusHtml = '';
+    let actionsHtml = '';
+    if (rec.status === 'recording') {
+      statusHtml = '<span class="tl-item-status">Recording</span>';
+    } else if (rec.status === 'encoding') {
+      statusHtml = '<span class="tl-item-status encoding">Encoding…</span>';
+    } else if (rec.status === 'done') {
+      statusHtml = '<span class="tl-item-status done">✓ Done</span>';
+      actionsHtml = `<a href="/recordings/${rec.filename}" class="btn btn-sm btn-accent" target="_blank">▶ Open</a>`;
+    } else if (rec.status === 'error') {
+      statusHtml = `<span class="tl-item-status" style="color:var(--danger)">Error</span>`;
+    }
+
+    const div = document.createElement('div');
+    div.className = 'tl-item';
+    div.dataset.id = rec.id;
+    div.innerHTML = `
+      <div class="tl-item-left">
+        <div class="tl-item-meta">Max ${rec.durationSec}s · ${age}s elapsed</div>
+        <div class="tl-item-stat">${frames} frames → ~${sizeEst} MB</div>
+      </div>
+      <div class="tl-item-right">
+        ${statusHtml}
+        ${actionsHtml}
+      </div>
+    `;
+    bcRecList.appendChild(div);
+  }
 }
 
 function renderTlList(elId) {
@@ -545,6 +688,13 @@ function startViewer() {
 
   connect('viewer');
   updateTlCalc();
+  updateRecordDuration();
+}
+
+// ─── Recording duration ────────────────────────────────────────────────────────
+
+function updateRecordDuration() {
+  MAX_RECORD_SEC = parseInt(document.getElementById('record-duration').value, 10);
 }
 
 // ─── Timelapse (viewer start) ─────────────────────────────────────────────────
@@ -568,86 +718,34 @@ function startTimelapse() {
 
 // ─── Recording ────────────────────────────────────────────────────────────────
 
+let currentRecordingId = null;
+
 function toggleRecording() {
   if (!recording) startRecording();
   else stopRecording();
 }
 
 function startRecording() {
-  const img = document.getElementById('viewer-img');
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = img.naturalWidth || 640;
-  canvas.height = img.naturalHeight || 480;
-
-  const videoTrack = canvas.captureStream(10).getVideoTracks()[0];
-  const tracks = [videoTrack];
-  if (audioDestNode) {
-    const audioTrack = audioDestNode.stream.getAudioTracks()[0];
-    if (audioTrack) tracks.push(audioTrack);
+  const durationSec = MAX_RECORD_SEC;
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ cmd: 'rec-start', durationSec }));
   }
-
-  const hasAudio = tracks.length > 1;
-  const mimeType = hasAudio && MediaRecorder.isTypeSupported('video/webm; codecs=vp8,opus')
-    ? 'video/webm; codecs=vp8,opus' : 'video/webm; codecs=vp8';
-  mediaRecorder = new MediaRecorder(new MediaStream(tracks), { mimeType });
-  recordedChunks = [];
-  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-  mediaRecorder.onstop = () => saveRecording();
-  mediaRecorder.start(500);
-
-  recording = true;
-  recordStart = Date.now();
-  document.getElementById('record-btn').textContent = '⏹ Stop';
-  document.getElementById('record-btn').classList.add('recording');
-  document.getElementById('progress-bar').style.display = 'block';
-
-  const drawFrame = () => {
-    if (!recording) return;
-    canvas.width = img.naturalWidth || 640;
-    canvas.height = img.naturalHeight || 480;
-    ctx.drawImage(img, 0, 0);
-    requestAnimationFrame(drawFrame);
-  };
-  drawFrame();
-
-  timerInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - recordStart) / 1000);
-    document.getElementById('timer').textContent = `${elapsed}s / ${MAX_RECORD_SEC}s`;
-    document.getElementById('progress-fill').style.width = `${(elapsed / MAX_RECORD_SEC) * 100}%`;
-    if (elapsed >= MAX_RECORD_SEC) stopRecording();
-  }, 500);
 }
 
 function stopRecording() {
-  if (!recording) return;
-  recording = false;
-  clearInterval(timerInterval);
-  mediaRecorder.stop();
-  document.getElementById('record-btn').textContent = 'Saving...';
-  document.getElementById('record-btn').disabled = true;
+  if (!currentRecordingId) return;
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ cmd: 'rec-stop', id: currentRecordingId }));
+  }
 }
 
-async function saveRecording() {
-  const blob = new Blob(recordedChunks, { type: 'video/webm' });
-  document.getElementById('viewer-status').textContent = `Uploading ${(blob.size / 1024 / 1024).toFixed(1)} MB...`;
-  try {
-    const res = await fetch('/save-recording', { method: 'POST', body: blob });
-    const data = await res.json();
-    document.getElementById('viewer-status').textContent = `Saved: ${data.filename}`;
-  } catch {
-    document.getElementById('viewer-status').textContent = 'Save failed — downloading locally.';
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `nannycam-${Date.now()}.webm`;
-    a.click();
-  }
-  document.getElementById('record-btn').textContent = '⏺ Record';
-  document.getElementById('record-btn').classList.remove('recording');
-  document.getElementById('record-btn').disabled = false;
-  document.getElementById('progress-bar').style.display = 'none';
-  document.getElementById('progress-fill').style.width = '0%';
-  document.getElementById('timer').textContent = '';
+function startRecordingTimer(id, durationSec) {
+  currentRecordingId = id;
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - recordStart) / 1000);
+    document.getElementById('timer').textContent = `${elapsed}s / ${durationSec}s`;
+    document.getElementById('progress-fill').style.width = `${(elapsed / durationSec) * 100}%`;
+  }, 500);
 }
 </script>
 </body>
